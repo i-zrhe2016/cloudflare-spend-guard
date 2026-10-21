@@ -98,6 +98,7 @@ test("refresh reads account usage and publishes the state", async () => {
     assert.equal(published.metrics.r2_class_a.used, 3);
     assert.equal(published.metrics.r2_class_b.used, 5);
     assert.equal(published.metrics.r2_storage_bytes.used, 2048);
+    assert.equal(published.metrics.d1_storage_bytes.used, 1024);
     assert.ok(queries.some((query) => query.includes("BudgetOptional")));
 
     const stored = await env.STATE.get("state", "json");

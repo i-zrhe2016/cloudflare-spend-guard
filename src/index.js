@@ -140,6 +140,23 @@ export function r2UsageFrom(body) {
   };
 }
 
+// D1 storage is reported per database. Keep each database's high-water mark
+// and sum them, so the account total is not reduced to the largest database.
+export function d1StorageFrom(body) {
+  const account = body?.data?.viewer?.accounts?.[0] || {};
+  const perDatabase = new Map();
+  const rows = Array.isArray(account.d1StorageAdaptiveGroups) ? account.d1StorageAdaptiveGroups : [];
+  for (const row of rows) {
+    const size = Number(row?.max?.databaseSizeBytes);
+    if (!Number.isFinite(size) || size < 0) continue;
+    const id = String(row?.dimensions?.databaseId || "");
+    perDatabase.set(id, Math.max(perDatabase.get(id) ?? 0, size));
+  }
+  return {
+    d1_storage_bytes: perDatabase.size ? [...perDatabase.values()].reduce((a, b) => a + b, 0) : null,
+  };
+}
+
 export function evaluateBudget(env, usage, start, now, previous) {
   const limits = budgetLimits(env);
   const metrics = {};
@@ -229,7 +246,8 @@ export async function refreshBudget(env, now = new Date()) {
   const variables = { account: env.CF_ACCOUNT_ID, start: start.toISOString(), end: now.toISOString() };
   const usage = { ...usageFrom(await graphql(env, REQUIRED_QUERY, variables)) };
   try {
-    Object.assign(usage, r2UsageFrom(await graphql(env, OPTIONAL_QUERY, variables)));
+    const optional = await graphql(env, OPTIONAL_QUERY, variables);
+    Object.assign(usage, r2UsageFrom(optional), d1StorageFrom(optional));
   } catch (error) {
     console.warn("budget_optional_metrics_unavailable", { message: String(error?.message || error) });
   }
