@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudflare-spend-guard",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-09",
+  "workers_dev": true,
+  "preview_urls": false,
+  // The guard refreshes account usage every minute and publishes the state to
+  // KV. Consumers in the same account bind this namespace and read `state`.
+  "triggers": { "crons": ["* * * * *"] },
+  "kv_namespaces": [{ "binding": "STATE", "id": "197abed79e214647be4b16f104ca66db" }],
+  "vars": {
+    "CF_ACCOUNT_ID": "0e016704dc5552d28010732c3d050a64",
+    "BUDGET_TRIP_PERCENT": "95",
+    "BUDGET_STALE_TRIP_SECONDS": "900"
+  }
+}
